@@ -34,7 +34,7 @@ def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_meth
     # Limit the ranges of width, height, and depth to be under 96. Crop the background, not the brain regions. 
     # Each dimension of fMRI registered to MNI space (2mm) is expected to be around 100.
     # You can do this when you load each volume at the Dataset class, including padding backgrounds to fill dimensions under 96.
-    data = torch.from_numpy(data, dtype=torch.float32)
+    data = torch.from_numpy(data).float()
     background = data==0
     
     if scaling_method == 'z-norm':
