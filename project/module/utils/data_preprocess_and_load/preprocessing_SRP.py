@@ -7,18 +7,20 @@ from glob import glob
 
 def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_method=None, fill_zeroback=False):
     print("processing: " + filename, flush=True)
-    bold_path = os.path.join(load_root, filename)
-    mask_path = os.path.join(load_root, mask_filename)
+    print("processing: " + mask_filename, flush=True)
+    bold_path = filename
+    mask_path = mask_filename
     try:
         # load each nifti file
-        data = nib.load(bold_path)
-        mask = nib.load(mask_path)
-    except:
-        return None
+        data = nib.load(bold_path).get_fdata()
+        mask = nib.load(mask_path).get_fdata()
+        mask = mask == 0
+    except Exception as e:
+        return print(e)
     
     # fill masks with zero
     for t in range(data.shape[3]):
-        data[:, :, :, t][~mask] = 0
+        data[:, :, :, t][mask] = 0
     
     #change this line according to your file names
     save_dir = os.path.join(save_root,subj_name)
@@ -63,7 +65,8 @@ def main():
     scaling_method = 'z-norm' # choose either 'z-norm'(default) or 'minmax'.
 
     # make result folders
-    filenames = glob(load_root)
+    filenames = glob(file_formats)
+    print("\n".join(filenames))
     os.makedirs(os.path.join(save_root,'img'), exist_ok = True)
     os.makedirs(os.path.join(save_root,'metadata'), exist_ok = True) # locate your metadata file at this folder 
     save_root = os.path.join(save_root,'img')
@@ -89,7 +92,7 @@ def main():
         if (subj_name not in finished_samples) or (len(os.listdir(os.path.join(save_root,subj_name))) < expected_seq_length): # preprocess if the subject folder does not exist, or the number of pth files is lower than expected sequence length. 
             try:
                 count+=1
-                p = Process(target=read_data, args=(filename,load_root,save_root,subj_name,count,queue,scaling_method))
+                p = Process(target=read_data, args=(filename, mask_filename,load_root,save_root,subj_name,scaling_method))
                 p.start()
                 if count % 32 == 0: # requires more than 32 cpu cores for parallel processing
                     p.join()
