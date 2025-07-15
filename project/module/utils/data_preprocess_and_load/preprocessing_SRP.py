@@ -1,4 +1,4 @@
-from monai.transforms import LoadImage
+import nibabel as nib
 import torch
 import os
 import time
@@ -11,8 +11,8 @@ def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_meth
     mask_path = os.path.join(load_root, mask_filename)
     try:
         # load each nifti file
-        data, meta = LoadImage()(bold_path)
-        mask, meta = LoadImage()(mask_path)
+        data = nib.load(bold_path)
+        mask = nib.load(mask_path)
     except:
         return None
     
