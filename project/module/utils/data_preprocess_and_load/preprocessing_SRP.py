@@ -7,11 +7,11 @@ from glob import glob
 
 def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_method=None, fill_zeroback=False):
     print("processing: " + filename, flush=True)
-    blob_path = os.path.join(load_root, filename)
+    bold_path = os.path.join(load_root, filename)
     mask_path = os.path.join(load_root, mask_filename)
     try:
         # load each nifti file
-        data, meta = LoadImage()(blob_path)
+        data, meta = LoadImage()(bold_path)
         mask, meta = LoadImage()(mask_path)
     except:
         return None
@@ -57,7 +57,7 @@ def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_meth
 def main():
     # change two lines below according to your dataset
     dataset_name = 'SRP'
-    file_formats = '/content/ds003745/*/*_desc-preproc_blob.nii.gz'
+    file_formats = '/content/ds003745/*/*_desc-preproc_bold.nii.gz'
     load_root = '/content/ds003745' # This folder should have fMRI files in nifti format with subject names. Ex) sub-01.nii.gz 
     save_root = f'/content/{dataset_name}_MNI_to_TRs_minmax'
     scaling_method = 'z-norm' # choose either 'z-norm'(default) or 'minmax'.
@@ -73,7 +73,7 @@ def main():
     count = 0
     for filename in sorted(filenames):
         mask_filename = filename.replace(
-            "_desc-preproc_blob.nii.gz",
+            "_desc-preproc_bold.nii.gz",
             "_desc-brain_mask.nii.gz"
         )
         if not os.path.exists(mask_filename):
