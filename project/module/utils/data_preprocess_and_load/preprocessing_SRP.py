@@ -5,9 +5,12 @@ import time
 from multiprocessing import Process, Queue
 from glob import glob
 
-def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_method=None, fill_zeroback=False):
+from tqdm import tqdm
+
+def read_data(filename, mask_filename,save_root,subj_name,scaling_method=None, fill_zeroback=False):
     print("processing: " + filename, flush=True)
-    print("processing: " + mask_filename, flush=True)
+    subj_id = subj_name.split("_")[0]
+
     bold_path = filename
     mask_path = mask_filename
     try:
@@ -52,7 +55,7 @@ def read_data(filename, mask_filename,load_root,save_root,subj_name,scaling_meth
     # save volumes one-by-one in fp16 format.
     data_global = data_global.type(torch.float16)
     data_global_split = torch.split(data_global, 1, 3)
-    for i, TR in enumerate(data_global_split):
+    for i, TR in tqdm(enumerate(data_global_split), desc=f"processing {subj_id}:"):
         torch.save(TR.clone(), os.path.join(save_dir,"frame_"+str(i)+".pt"))
 
 
@@ -60,19 +63,17 @@ def main():
     # change two lines below according to your dataset
     dataset_name = 'SRP'
     file_formats = '/content/ds003745/*/*_desc-preproc_bold.nii.gz'
-    load_root = '/content/ds003745' # This folder should have fMRI files in nifti format with subject names. Ex) sub-01.nii.gz 
     save_root = f'/content/{dataset_name}_MNI_to_TRs_minmax'
     scaling_method = 'z-norm' # choose either 'z-norm'(default) or 'minmax'.
 
     # make result folders
     filenames = glob(file_formats)
-    print("\n".join(filenames))
+    
     os.makedirs(os.path.join(save_root,'img'), exist_ok = True)
     os.makedirs(os.path.join(save_root,'metadata'), exist_ok = True) # locate your metadata file at this folder 
     save_root = os.path.join(save_root,'img')
     
-    finished_samples = os.listdir(save_root)
-    queue = Queue() 
+    finished_samples = os.listdir(save_root) 
     count = 0
     for filename in sorted(filenames):
         mask_filename = filename.replace(
@@ -82,7 +83,7 @@ def main():
         if not os.path.exists(mask_filename):
             continue
 
-        subj_name = filename[:-25]
+        subj_name = os.path.basename(filename[:-25])
         # extract subject name from nifti file. [:-7] rules out '.nii.gz'
         # we recommend you use subj_name that aligns with the subject key in a metadata file.
 
@@ -92,10 +93,7 @@ def main():
         if (subj_name not in finished_samples) or (len(os.listdir(os.path.join(save_root,subj_name))) < expected_seq_length): # preprocess if the subject folder does not exist, or the number of pth files is lower than expected sequence length. 
             try:
                 count+=1
-                p = Process(target=read_data, args=(filename, mask_filename,load_root,save_root,subj_name,scaling_method))
-                p.start()
-                if count % 32 == 0: # requires more than 32 cpu cores for parallel processing
-                    p.join()
+                read_data(filename, mask_filename,save_root,subj_name,scaling_method)
             except Exception:
                 print('encountered problem with'+filename)
                 print(Exception)
