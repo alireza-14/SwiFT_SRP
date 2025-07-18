@@ -16,6 +16,23 @@ import glob
 
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler, KBinsDiscretizer
 
+
+# ------------------------------
+# Helper Function to Load Labels
+# ------------------------------
+def load_subject_dict(csv_path):
+    df = pd.read_csv(csv_path, sep="\t")
+    subject_dict = {}
+
+    for _, row in df.iterrows():
+        subject_id = row['participant_id']  # Adjust column name if needed
+        sex = int(row['sex'])           # Assuming encoded as 0/1 or needs mapping
+        target = float(row['age'])   # Your label (e.g., age, IQ, etc.)
+        subject_dict[subject_id] = (sex, target)
+
+    return subject_dict
+
+
 class BaseDataset(Dataset):
     def __init__(self, **kwargs):
         super().__init__()      
@@ -86,6 +103,7 @@ class BaseDataset(Dataset):
     def _set_data(self, root, subject_dict):
         raise NotImplementedError("Required function")
 
+
 class S1200(BaseDataset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -148,6 +166,7 @@ class S1200(BaseDataset):
                 "TR": start_frame,
                 "sex": sex,
             } 
+
 
 class ABCD(BaseDataset):
     def __init__(self, **kwargs):
@@ -230,7 +249,7 @@ class ABCD(BaseDataset):
                 "TR": start_frame,
                 "sex": sex,
             } 
-        
+
 
 class UKB(BaseDataset):
     def __init__(self, **kwargs):
@@ -295,6 +314,72 @@ class UKB(BaseDataset):
                         "TR": start_frame,
                         "sex": sex,
                     } 
+        
+
+# ------------------------------
+# Dataset Class for ds003745
+# ------------------------------
+class DS003745(BaseDataset):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _set_data(self, root, subject_dict):
+        data = []
+        img_root = os.path.join(root, 'img')
+        subject_dict_path = os.path.join(root, 'metadata', "participants.txt")
+        subject_dict = load_subject_dict(subject_dict_path)
+        for i, subject in enumerate(subject_dict):
+            sex, target = subject_dict[subject]
+            subject_path = os.path.join(img_root, subject)
+            num_frames = len(os.listdir(subject_path)) - 2  # subtract voxel_mean.pt & voxel_std.pt
+            session_duration = num_frames - self.sample_duration + 1
+
+            for start_frame in range(0, session_duration, self.stride):
+                data.append((i, subject, subject_path, start_frame, self.stride, num_frames, target, sex))
+
+        if self.train:
+            self.target_values = np.array([d[6] for d in data]).reshape(-1, 1)
+
+        return data
+
+    def __getitem__(self, index):
+        _, subject, subject_path, start_frame, sequence_length, num_frames, target, sex = self.data[index]
+
+        if self.contrastive:
+            y, rand_y = self.load_sequence(subject_path, start_frame, sequence_length)
+
+            for i, seq in enumerate([y, rand_y]):
+                background_value = seq.flatten()[0]
+                seq = seq.permute(0, 4, 1, 2, 3)
+                seq = torch.nn.functional.pad(seq, (4, 4, 4, 4, 4, 4), value=background_value)
+                seq = seq.permute(0, 2, 3, 4, 1)
+                if i == 0:
+                    y = seq
+                else:
+                    rand_y = seq
+
+            return {
+                "fmri_sequence": (y, rand_y),
+                "subject_name": subject,
+                "target": target,
+                "TR": start_frame,
+                "sex": sex,
+            }
+        else:
+            y = self.load_sequence(subject_path, start_frame, sequence_length, num_frames)
+            background_value = y.flatten()[0]
+            y = y.permute(0, 4, 1, 2, 3)
+            y = torch.nn.functional.pad(y, (4, 4, 4, 4, 4, 4), value=background_value)
+            y = y.permute(0, 2, 3, 4, 1)
+
+            return {
+                "fmri_sequence": y,
+                "subject_name": subject,
+                "target": target,
+                "TR": start_frame,
+                "sex": sex,
+            }
+
     
 class Dummy(BaseDataset):
     def __init__(self, **kwargs):
