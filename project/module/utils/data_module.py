@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader, Subset
-from .data_preprocess_and_load.datasets import S1200, ABCD, UKB, Dummy
+from .data_preprocess_and_load.datasets import S1200, ABCD, UKB, Dummy, DS003745
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from .parser import str2bool
 
@@ -36,6 +36,8 @@ class fMRIDataModule(pl.LightningDataModule):
             return ABCD
         elif self.hparams.dataset_name == 'UKB':
             return UKB
+        elif self.hparams.dataset_name == "DS003745":
+            return DS003745
         else:
             raise NotImplementedError
 
