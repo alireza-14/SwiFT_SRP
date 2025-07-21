@@ -23,11 +23,11 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler, KB
 def load_subject_dict(csv_path):
     df = pd.read_csv(csv_path, sep="\t")
     subject_dict = {}
-
+    gender_to_id = {"F":0, "M":1}
     for _, row in df.iterrows():
         subject_id = row['participant_id']  # Adjust column name if needed
         sex = row['sex']           # Assuming encoded as 0/1 or needs mapping
-        target = float(row['age'])   # Your label (e.g., age, IQ, etc.)
+        target = gender_to_id[sex]   # Your label (e.g., age, IQ, etc.)
         subject_dict[subject_id] = (sex, target)
 
     return subject_dict
@@ -362,7 +362,7 @@ class DS003745(BaseDataset):
             for i, seq in enumerate([y, rand_y]):
                 background_value = seq.flatten()[0]
                 seq = seq.permute(0, 4, 1, 2, 3)
-                seq = torch.nn.functional.pad(seq, (4, 4, 4, 4, 4, 4), value=background_value)
+                seq = torch.nn.functional.pad(seq, (17, 18, 9, 9, 15, 15), value=background_value)
                 seq = seq.permute(0, 2, 3, 4, 1)
                 if i == 0:
                     y = seq
@@ -380,7 +380,7 @@ class DS003745(BaseDataset):
             y = self.load_sequence(subject_path, start_frame, sequence_length, num_frames)
             background_value = y.flatten()[0]
             y = y.permute(0, 4, 1, 2, 3)
-            y = torch.nn.functional.pad(y, (4, 4, 4, 4, 4, 4), value=background_value)
+            y = torch.nn.functional.pad(y, (17, 18, 9, 9, 15, 15), value=background_value)
             y = y.permute(0, 2, 3, 4, 1)
 
             return {

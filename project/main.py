@@ -159,7 +159,7 @@ def cli_main():
         new_state_dict = OrderedDict()
         for k, v in ckpt['state_dict'].items():
             if 'model.head.' in k:
-                new_state_dict["output_head." + k.removeprefix("model.")] = v
+                pass
             elif 'model.' in k: #transformer-related layers
                 new_state_dict[k.removeprefix("model.")] = v
         model.model.load_state_dict(new_state_dict)
