@@ -26,7 +26,7 @@ def load_subject_dict(csv_path):
 
     for _, row in df.iterrows():
         subject_id = row['participant_id']  # Adjust column name if needed
-        sex = int(row['sex'])           # Assuming encoded as 0/1 or needs mapping
+        sex = row['sex']           # Assuming encoded as 0/1 or needs mapping
         target = float(row['age'])   # Your label (e.g., age, IQ, etc.)
         subject_dict[subject_id] = (sex, target)
 
@@ -329,13 +329,24 @@ class DS003745(BaseDataset):
         subject_dict_path = os.path.join(root, 'metadata', "participants.txt")
         subject_dict = load_subject_dict(subject_dict_path)
         for i, subject in enumerate(subject_dict):
-            sex, target = subject_dict[subject]
-            subject_path = os.path.join(img_root, subject)
-            num_frames = len(os.listdir(subject_path)) - 2  # subtract voxel_mean.pt & voxel_std.pt
-            session_duration = num_frames - self.sample_duration + 1
+          sex, target = subject_dict[subject]
+          
+          # Find all folders that start with the subject ID
+          subject_dirs = [d for d in os.listdir(img_root) 
+                          if os.path.isdir(os.path.join(img_root, d)) and d.startswith(subject)]
 
-            for start_frame in range(0, session_duration, self.stride):
-                data.append((i, subject, subject_path, start_frame, self.stride, num_frames, target, sex))
+          for sub_dir in subject_dirs:
+              subject_path = os.path.join(img_root, sub_dir)
+              
+              # Exclude voxel_mean.pt and voxel_std.pt
+              frame_files = [f for f in os.listdir(subject_path)
+                            if f not in ['voxel_mean.pt', 'voxel_std.pt']]
+              
+              num_frames = len(frame_files)
+              session_duration = num_frames - self.sample_duration + 1
+
+              for start_frame in range(0, session_duration, self.stride):
+                  data.append((i, subject, subject_path, start_frame, self.stride, num_frames, target, sex))
 
         if self.train:
             self.target_values = np.array([d[6] for d in data]).reshape(-1, 1)

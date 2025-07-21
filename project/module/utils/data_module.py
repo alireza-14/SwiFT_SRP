@@ -28,6 +28,7 @@ class fMRIDataModule(pl.LightningDataModule):
         #pl.seed_everything(seed=self.hparams.data_seed)
 
     def get_dataset(self):
+        print(f"loading dataset: {self.hparams.dataset_name}")
         if self.hparams.dataset_name == "Dummy":
             return Dummy
         elif self.hparams.dataset_name == "S1200":

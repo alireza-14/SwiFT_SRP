@@ -20,7 +20,7 @@ def cli_main():
     # ------------ args -------------
     parser = ArgumentParser(add_help=False, formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument("--seed", default=1234, type=int, help="random seeds. recommend aligning this argument with data split number to control randomness")
-    parser.add_argument("--dataset_name", type=str, choices=["S1200", "ABCD", "UKB", "Dummy"], default="S1200")
+    parser.add_argument("--dataset_name", type=str, choices=["S1200", "ABCD", "UKB", "Dummy", "DS003745"], default="S1200")
     parser.add_argument("--downstream_task", type=str, default="sex", help="downstream task")
     parser.add_argument("--downstream_task_type", type=str, default="default", help="select either classification or regression according to your downstream task")
     parser.add_argument("--classifier_module", default="default", type=str, help="A name of lightning classifier module (outdated argument)")
@@ -54,6 +54,8 @@ def cli_main():
     devices = args.devices
     project_name = args.project_name
     image_path = args.image_path
+    dataset_name = args.dataset_name
+    loggername = args.loggername
 
     if temp_args.resume_ckpt_path is not None:
         # resume previous experiment
@@ -156,7 +158,9 @@ def cli_main():
         ckpt = torch.load(path)
         new_state_dict = OrderedDict()
         for k, v in ckpt['state_dict'].items():
-            if 'model.' in k: #transformer-related layers
+            if 'model.head.' in k:
+                new_state_dict["output_head." + k.removeprefix("model.")] = v
+            elif 'model.' in k: #transformer-related layers
                 new_state_dict[k.removeprefix("model.")] = v
         model.model.load_state_dict(new_state_dict)
 
