@@ -326,8 +326,6 @@ class DS003745(BaseDataset):
     def _set_data(self, root, subject_dict):
         data = []
         img_root = os.path.join(root, 'img')
-        subject_dict_path = os.path.join(root, 'metadata', "participants.txt")
-        subject_dict = load_subject_dict(subject_dict_path)
         for i, subject in enumerate(subject_dict):
           sex, target = subject_dict[subject]
           
