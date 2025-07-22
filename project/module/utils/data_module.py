@@ -166,6 +166,42 @@ class fMRIDataModule(pl.LightningDataModule):
                     final_dict[str(subject[:7])] = [sex,target]
                 else:
                     continue 
+
+        elif self.hparams.dataset_name == "DS003745":
+            subject_list = list(set([i.split('_')[0] for i in os.listdir(img_root)]))
+
+            meta_data_path = os.path.join(self.hparams.image_path, 'metadata', "participants.txt")
+            meta_data = pd.read_csv(meta_data_path, sep="\t")
+
+
+            if self.hparams.downstream_task == 'sex':
+                task_name = 'sex'
+            elif self.hparams.downstream_task == 'age':
+                task_name = 'age'
+            else:
+                raise ValueError(f"Downstream task '{self.hparams.downstream_task}' not supported for DS003745")
+
+
+            meta_data = meta_data.set_index('participant_id')
+
+            for subject in subject_list:
+
+                if subject in meta_data.index:
+                    try:
+
+                        sex_str = meta_data.loc[subject]['sex']
+                        target = meta_data.loc[subject][task_name]
+
+                        # Convert sex to numeric format (e.g., M=1, F=0)
+
+                        sex = 1 if sex_str == "M" else 0
+
+                        if self.hparams.downstream_task == 'sex':
+                            target = sex
+
+                        final_dict[subject] = [sex, target]
+                    except KeyError:
+                        print(f"Warning: Subject {subject} found in img folder but not in labels.csv. Skipping.")        
         
         return final_dict
 
